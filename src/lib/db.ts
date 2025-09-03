@@ -51,6 +51,22 @@ async function initializeDatabase() {
         
         console.log('[DB] Audit log table is ready.');
 
+        await db.exec(`
+          CREATE TABLE IF NOT EXISTS mailbox (
+            id TEXT PRIMARY KEY,
+            conversationId TEXT NOT NULL,
+            senderId TEXT NOT NULL,
+            recipientId TEXT NOT NULL,
+            encryptedContent TEXT NOT NULL,
+            signature TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            prevMessageId TEXT,
+            FOREIGN KEY(senderId) REFERENCES users(operatorId),
+            FOREIGN KEY(recipientId) REFERENCES users(operatorId)
+          );
+        `);
+        console.log('[DB] Mailbox table is ready.');
+
 
         // Add a default user if they don't exist
         const defaultUser = await db.get('SELECT * FROM users WHERE operatorId = ?', 'Operator-7');
@@ -150,6 +166,35 @@ export async function countRecentFailedLogins(minutes: number): Promise<number> 
         since
     );
     return result.count;
+}
+
+// --- Mailbox Functions ---
+
+export async function storeMessage(message: {
+    id: string;
+    conversationId: string;
+    senderId: string;
+    recipientId: string;
+    encryptedContent: string;
+    signature: string;
+    timestamp: string;
+    prevMessageId: string | null;
+}) {
+    return db.run(
+        'INSERT INTO mailbox (id, conversationId, senderId, recipientId, encryptedContent, signature, timestamp, prevMessageId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        message.id,
+        message.conversationId,
+        message.senderId,
+        message.recipientId,
+        message.encryptedContent,
+        message.signature,
+        message.timestamp,
+        message.prevMessageId
+    );
+}
+
+export async function getMessagesForRecipient(recipientId: string) {
+    return db.all('SELECT * FROM mailbox WHERE recipientId = ? ORDER BY timestamp DESC', recipientId);
 }
 
 
