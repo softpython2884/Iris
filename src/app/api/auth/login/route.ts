@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 const users: { [key: string]: any } = {
     "Operator-7": {
         operatorId: "Operator-7",
-        accessKey: "cresus",
+        accessKey: "IRIS-Ut9OWLLQWhB#FEc6awCLdLlZrSUh$WGzLHpvvCbY",
         securityLevel: "3.1",
         token: "dummy-token-for-op7",
         privateKey: "dummy-private-key-for-op7"
