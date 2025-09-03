@@ -16,6 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { BotIcon, Settings2, PlusCircle } from 'lucide-react';
 import { Button } from '../ui/button';
+import { BotJobDialog } from './bot-job-dialog';
 
 const bots: Bot[] = [
   {
@@ -53,9 +54,11 @@ export function BotManager() {
           <CardTitle className="text-base text-accent">BOTS</CardTitle>
         </div>
         <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-accent/80 hover:bg-accent/20 hover:text-accent">
-                <PlusCircle className="h-4 w-4" />
-            </Button>
+            <BotJobDialog>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-accent/80 hover:bg-accent/20 hover:text-accent">
+                  <PlusCircle className="h-4 w-4" />
+              </Button>
+            </BotJobDialog>
             <Button variant="ghost" size="icon" className="h-7 w-7 text-accent/80 hover:bg-accent/20 hover:text-accent">
                 <Settings2 className="h-4 w-4" />
             </Button>
