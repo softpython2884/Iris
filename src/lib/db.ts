@@ -359,7 +359,16 @@ export async function getMessagesForChannel(channel_id: string, since?: string) 
 
 // --- Entity & Bot Job Functions ---
 
-export async function getEntities(): Promise<ExtractedEntityDb[]> {
+export async function getEntities(searchQuery: string | null): Promise<ExtractedEntityDb[]> {
+    if (searchQuery) {
+        const query = `%${searchQuery}%`;
+        return db.all(
+            `SELECT * FROM entities 
+             WHERE name LIKE ? OR summary LIKE ? OR tags LIKE ? OR provenance LIKE ?
+             ORDER BY name ASC`,
+            query, query, query, query
+        );
+    }
     return db.all('SELECT * FROM entities ORDER BY name ASC');
 }
 
