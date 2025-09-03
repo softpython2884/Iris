@@ -220,5 +220,42 @@ export async function getMessagesForRecipient(recipientId: string) {
     return db.all('SELECT * FROM mailbox WHERE recipientId = ? ORDER BY timestamp DESC', recipientId);
 }
 
+// --- Chat Functions ---
+
+export async function createChatChannel(channel: { id: string; name: string; is_persistent: boolean; created_at: string; }) {
+    return db.run(
+        'INSERT INTO chat_channels (id, name, is_persistent, created_at) VALUES (?, ?, ?, ?)',
+        channel.id,
+        channel.name,
+        channel.is_persistent,
+        channel.created_at
+    );
+}
+
+export async function getChannelByName(name: string) {
+    return db.get('SELECT * FROM chat_channels WHERE name = ?', name);
+}
+
+export async function storeChatMessage(message: { id: string; channel_id: string; sender_id: string; encrypted_content: string; timestamp: string; }) {
+    return db.run(
+        'INSERT INTO chat_messages (id, channel_id, sender_id, encrypted_content, timestamp) VALUES (?, ?, ?, ?, ?)',
+        message.id,
+        message.channel_id,
+        message.sender_id,
+        message.encrypted_content,
+        message.timestamp
+    );
+}
+
+export async function getMessagesForChannel(channel_id: string, since?: string) {
+    let query = 'SELECT * FROM chat_messages WHERE channel_id = ?';
+    const params: any[] = [channel_id];
+    if (since) {
+        query += ' AND timestamp > ?';
+        params.push(since);
+    }
+    query += ' ORDER BY timestamp ASC';
+    return db.all(query, ...params);
+}
 
 export { db };

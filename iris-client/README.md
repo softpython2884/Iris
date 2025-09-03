@@ -159,6 +159,60 @@ These endpoints require a valid JWT in the `Authorization: Bearer <token>` heade
     }
     ```
 
+#### Create Chat Channel
+- **URL**: `POST /api/chat`
+- **Description**: Creates a new channel for real-time chat.
+- **Request Body**:
+    ```json
+    {
+      "name": "string", // The unique name for the channel
+      "is_persistent": "boolean" // Optional, defaults to false
+    }
+    ```
+- **Success Response (201 Created)**:
+    ```json
+    {
+      "message": "Channel created successfully.",
+      "channelId": "string"
+    }
+    ```
+
+#### Send Chat Message
+- **URL**: `POST /api/chat/{channelId}`
+- **Description**: Sends a message to a specific chat channel.
+- **Request Body**:
+    ```json
+    {
+      "encryptedContent": "string"
+    }
+    ```
+- **Success Response (201 Created)**:
+    ```json
+    {
+      "message": "Message sent.",
+      "messageId": "string"
+    }
+    ```
+
+#### Retrieve Chat Messages
+- **URL**: `GET /api/chat/{channelId}`
+- **URL with Polling**: `GET /api/chat/{channelId}?since=<timestamp>`
+- **Description**: Retrieves messages from a channel. To get only new messages since the last fetch, include the `since` query parameter with the timestamp of the last received message.
+- **Success Response (200 OK)**:
+    ```json
+    {
+      "messages": [
+        {
+          "id": "string",
+          "channel_id": "string",
+          "sender_id": "string",
+          "encrypted_content": "string",
+          "timestamp": "string"
+        }
+      ]
+    }
+    ```
+
 ---
 
 ### Default User for Testing
@@ -220,4 +274,3 @@ This is an example of a smaller, focused UI component.
 - The client should be developed using libraries suitable for creating complex TUIs in Node.js, such as `blessed`, `blessed-contrib`, or similar.
 - It needs to handle asynchronous operations gracefully (e.g., API calls) without freezing the UI.
 - It must parse and display data from the server API within the defined UI components.
-```
