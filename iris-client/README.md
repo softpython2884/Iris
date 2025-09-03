@@ -135,6 +135,42 @@ These endpoints require a valid JWT in the `Authorization: Bearer <token>` heade
     -   `401 Unauthorized`: If the token is missing or invalid.
     -   `403 Forbidden`: If the user's security level is not 7.
 
+#### Initiate Data Export
+
+-   **URL**: `POST /api/system/export`
+-   **Description**: Triggers a full system data export. This is intended as part of the LV3 lockdown procedure. It returns a large JSON object containing all data from the database. **Requires an administrator token (Security Level 7).**
+-   **Request Body**: (empty)
+-   **Success Response (200 OK)**:
+    A JSON object containing all system data, structured by table.
+    ```json
+    {
+      "export_timestamp": "string",
+      "schema_version": "1.0",
+      "data": {
+        "users": [],
+        "audit_log": [],
+        "entities": [],
+        "mailbox": [],
+        "chat_channels": [],
+        "chat_messages": [],
+        "bot_jobs": [],
+        "bot_job_urls": [],
+        "bot_job_logs": [],
+        "remote_agents": [],
+        "remote_sessions": [],
+        "remote_commands": [],
+        "system_state": []
+      }
+    }
+    ```
+-   **Error Responses**:
+    -   `401 Unauthorized`: If the token is missing or invalid.
+    -   `403 Forbidden`: If the user's security level is not 7.
+
+---
+
+### Mailbox & Messaging
+
 #### Send a Message
 
 -   **URL**: `POST /api/messages`
@@ -394,14 +430,14 @@ Endpoints for managing remote agents and command execution.
       "command": "string" // e.g., "ls -la"
     }
     ```
-- **Success Response (200 OK)**:
+-   **Success Response (200 OK)**:
     ```json
     {
       "output": "string", // The result from the executed command
       "isError": false
     }
     ```
-- **Error Responses**:
+-   **Error Responses**:
     - `403 Forbidden`: If the session is not active.
     - `404 Not Found`: If the session ID is invalid.
 
@@ -431,7 +467,7 @@ This is the primary screen after a successful login.
 │  🔒 LOCKDOWN: <GREEN>LV0</GREEN>   │ Tor: <GREEN>ON</GREEN> 185.220.101.1 (NL) │ Host: node-01      │
 ├────────────────────────────────────────────────────────────────────────────────────────────┤
 │ [BTN:tab_contacts] Contacts  [BTN:tab_db] DB  [BTN:tab_iris] IRIS  [BTN:tab_tools] Tools   │
-│ [BTN:tab_bots] Bots  [BTN:tab_settings] Settings  [BTN:tab_admin] Admin  [BTN:quit] Exit  │
+│ [BTN:tab_bots] Bots  [BTN:tab_settings] Settings  [BTN:tab_admin] Admin  [BTN:tab_quit] Exit  │
 ├──────────────┬──────────────────────────────────────────────┬───────────────────────────────┤
 │ Status Panel │                MULTI-FUNCTION ZONE           │   Right Multi-Zone            │
 │ (top-left)   │ (center big area)                            │  (chat/mail/note selector)    │
