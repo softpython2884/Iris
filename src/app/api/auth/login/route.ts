@@ -31,7 +31,7 @@ export async function POST(request: Request) {
         const failedAttempts = await countRecentFailedLogins(FAILED_LOGIN_TIMEFRAME_MINUTES);
         if (failedAttempts >= FAILED_LOGIN_THRESHOLD) {
             const currentLockdown = await getSystemState('lockdown_level');
-            if (currentLockdown === 'NONE') {
+            if (currentLockdown === 'NONE' || !currentLockdown) { // check for null or 'NONE'
                 await setSystemState('lockdown_level', 'LV1');
                 await logAuditEvent('AUTOLOCK_TRIGGERED', 'SYSTEM', `System auto-locked to LV1 due to ${failedAttempts} failed login attempts.`);
             }
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("[LOGIN_ERROR]", error);
-    await logAuditEvent('LOGIN_ERROR', null, `Internal server error during login process: ${error.message}`);
+    await logAuditEvent('API_ERROR', 'SYSTEM', `Internal server error during login process: ${error.message}`);
     return NextResponse.json({ error: 'Authentication process failed.', details: error.message }, { status: 500 });
   }
 }

@@ -1,11 +1,8 @@
 'use server';
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import jwt from 'jsonwebtoken';
-import { createUser, getUserByOperatorId, getSystemState } from '@/lib/db';
+import { createUser, getUserByOperatorId } from '@/lib/db';
 import { authenticateRequest } from '@/lib/auth';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-that-should-be-in-env';
 
 function generateAccessKey(): string {
     const prefix = "IRIS-";
@@ -20,17 +17,18 @@ function generateAccessKey(): string {
 
 export async function POST(request: Request) {
   try {
-    const authData = await authenticateRequest(request);
-    if ('error' in authData) {
-        return NextResponse.json({ error: authData.error }, { status: authData.status });
+    // 1. Authenticate and authorize the request
+    const authResult = await authenticateRequest(request);
+    if (authResult.error) {
+        return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
     
-    // 2. Check permissions
-    if (authData.decodedToken.securityLevel !== '7') {
+    // 2. Check for admin privileges
+    if (authResult.decodedToken.securityLevel !== '7') {
         return NextResponse.json({ error: 'Insufficient permissions. Administrator access required.' }, { status: 403 });
     }
     
-    console.log(`[SIGNUP_REQUEST] Authorized by: ${authData.decodedToken.operatorId}`);
+    console.log(`[SIGNUP_REQUEST] Authorized by: ${authResult.decodedToken.operatorId}`);
 
     // 3. Proceed with user creation
     const { operatorId, securityLevel, subLevel } = await request.json();
@@ -60,6 +58,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("[SIGNUP_ERROR]", error);
+    // In a real scenario, you'd want to log this error event as well.
     return NextResponse.json({ error: 'Failed to create operator profile.', details: error.message }, { status: 500 });
   }
 }

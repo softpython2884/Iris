@@ -1,12 +1,18 @@
 'use server';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { getSystemState } from '@/lib/db';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-that-should-be-in-env';
 
-export async function authenticateRequest(request: Request) {
+interface AuthResult {
+    decodedToken?: any;
+    error?: string;
+    status?: number;
+}
+
+export async function authenticateRequest(request: Request): Promise<AuthResult> {
     // 1. Check lockdown status first
     const lockdownLevel = await getSystemState('lockdown_level');
     if (lockdownLevel === 'LV2' || lockdownLevel === 'LV3') {
