@@ -54,6 +54,7 @@ const ExtractedEntitySchema = z.object({
     .describe(
       'A list of relationships to other entities mentioned in the text.'
     ),
+    relatedLinks: z.array(z.string()).optional().describe('A list of relevant URLs found in the text that are worth exploring next.')
 });
 
 // Define the output schema for the flow, which is a list of extracted entities.
@@ -102,6 +103,7 @@ You must format your output as a JSON object that strictly adheres to the provid
 - **tags**: Generate a list of short, relevant keywords (e.g., "tech", "military", "finance", "operative").
 - **keyFacts**: List the most critical pieces of information about the entity as bullet points.
 - **relationships**: Identify and describe all connections between this entity and other entities mentioned in the text.
+- **relatedLinks**: From the text, extract any URLs that seem important for further investigation.
 
 Analyze the following text and extract all entities:
 
