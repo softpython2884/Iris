@@ -2,6 +2,7 @@ import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import path from 'path';
 import crypto from 'crypto';
+import { BotJob, BotJobLog, BotJobUrl, Entity } from './types';
 
 // Let's declare a global variable to hold the database connection.
 let db: Database<sqlite3.Database, sqlite3.Statement>;
@@ -93,17 +94,60 @@ async function initializeDatabase() {
         await db.exec(`
             CREATE TABLE IF NOT EXISTS entities (
                 id TEXT PRIMARY KEY,
+                jobId TEXT,
                 name TEXT NOT NULL,
                 type TEXT NOT NULL,
                 description TEXT,
                 tags TEXT,
+                keyFacts TEXT,
+                relationships TEXT,
+                relatedLinks TEXT,
                 accessLevel INTEGER NOT NULL,
                 provenance TEXT,
                 linked_entities TEXT,
-                media_links TEXT
+                media_links TEXT,
+                FOREIGN KEY(jobId) REFERENCES bot_jobs(id)
             );
         `);
         console.log('[DB] Entities table is ready.');
+
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS bot_jobs (
+                id TEXT PRIMARY KEY,
+                operatorId TEXT NOT NULL,
+                initialUrl TEXT NOT NULL,
+                status TEXT NOT NULL, -- PENDING, RUNNING, COMPLETED, FAILED
+                createdAt TEXT NOT NULL,
+                updatedAt TEXT NOT NULL,
+                completedAt TEXT,
+                FOREIGN KEY(operatorId) REFERENCES users(operatorId)
+            );
+        `);
+        console.log('[DB] Bot jobs table is ready.');
+
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS bot_job_urls (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                jobId TEXT NOT NULL,
+                url TEXT NOT NULL,
+                status TEXT NOT NULL, -- PENDING, PROCESSED, FAILED
+                depth INTEGER NOT NULL,
+                FOREIGN KEY(jobId) REFERENCES bot_jobs(id)
+            );
+        `);
+        console.log('[DB] Bot job URLs table is ready.');
+        
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS bot_job_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                jobId TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                level TEXT NOT NULL, -- INFO, WARN, ERROR
+                message TEXT NOT NULL,
+                FOREIGN KEY(jobId) REFERENCES bot_jobs(id)
+            );
+        `);
+        console.log('[DB] Bot job logs table is ready.');
 
 
         // Add a default user if they don't exist
@@ -272,5 +316,101 @@ export async function getMessagesForChannel(channel_id: string, since?: string) 
     query += ' ORDER BY timestamp ASC';
     return db.all(query, ...params);
 }
+
+// --- Entity & Bot Job Functions ---
+
+export async function getEntities() {
+    return db.all('SELECT * FROM entities ORDER BY name ASC');
+}
+
+export async function storeEntities(jobId: string, entities: Entity[]) {
+    const stmt = await db.prepare(
+        'INSERT INTO entities (id, jobId, name, type, description, tags, keyFacts, relationships, relatedLinks, accessLevel, provenance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    for (const entity of entities) {
+        await stmt.run(
+            crypto.randomUUID(),
+            jobId,
+            entity.name,
+            entity.type,
+            entity.summary,
+            JSON.stringify(entity.tags),
+            JSON.stringify(entity.keyFacts),
+            JSON.stringify(entity.relationships),
+            JSON.stringify(entity.relatedLinks),
+            1, // Default access level
+            entity.provenance
+        );
+    }
+    await stmt.finalize();
+}
+
+export async function createBotJob(operatorId: string, initialUrl: string): Promise<string> {
+    const jobId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    await db.run(
+        'INSERT INTO bot_jobs (id, operatorId, initialUrl, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
+        jobId, operatorId, initialUrl, 'PENDING', now, now
+    );
+    return jobId;
+}
+
+export async function updateJobStatus(jobId: string, status: BotJob['status']) {
+    const now = new Date().toISOString();
+    let query = 'UPDATE bot_jobs SET status = ?, updatedAt = ?';
+    const params: any[] = [status, now];
+    if (status === 'COMPLETED' || status === 'FAILED') {
+        query += ', completedAt = ?';
+        params.push(now);
+    }
+    query += ' WHERE id = ?';
+    params.push(jobId);
+    
+    return db.run(query, ...params);
+}
+
+
+export async function addUrlToQueue(jobId: string, url: string, depth: number) {
+    // Avoid adding duplicate URLs for the same job
+    const existing = await db.get('SELECT id FROM bot_job_urls WHERE jobId = ? AND url = ?', jobId, url);
+    if (!existing) {
+        return db.run(
+            'INSERT INTO bot_job_urls (jobId, url, status, depth) VALUES (?, ?, ?, ?)',
+            jobId, url, 'PENDING', depth
+        );
+    }
+}
+
+export async function getNextUrlFromQueue(jobId: string): Promise<BotJobUrl | undefined> {
+    return db.get("SELECT * FROM bot_job_urls WHERE jobId = ? AND status = 'PENDING' ORDER BY depth ASC, id ASC LIMIT 1", jobId);
+}
+
+export async function updateUrlStatus(urlId: number, status: BotJobUrl['status']) {
+    return db.run('UPDATE bot_job_urls SET status = ? WHERE id = ?', status, urlId);
+}
+
+export async function logToJob(jobId: string, level: BotJobLog['level'], message: string) {
+    return db.run(
+        'INSERT INTO bot_job_logs (jobId, timestamp, level, message) VALUES (?, ?, ?, ?)',
+        jobId, new Date().toISOString(), level, message
+    );
+}
+
+export async function getJobs(): Promise<BotJob[]> {
+    return db.all('SELECT * FROM bot_jobs ORDER BY createdAt DESC');
+}
+
+export async function getJob(jobId: string): Promise<BotJob | undefined> {
+    return db.get('SELECT * FROM bot_jobs WHERE id = ?', jobId);
+}
+
+export async function getJobUrls(jobId: string): Promise<BotJobUrl[]> {
+    return db.all('SELECT * FROM bot_job_urls WHERE jobId = ? ORDER BY id ASC', jobId);
+}
+
+export async function getJobLogs(jobId: string): Promise<BotJobLog[]> {
+    return db.all('SELECT * FROM bot_job_logs WHERE jobId = ? ORDER BY timestamp ASC', jobId);
+}
+
 
 export { db };
