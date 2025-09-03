@@ -90,6 +90,21 @@ async function initializeDatabase() {
         `);
         console.log('[DB] Chat messages table is ready.');
 
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS entities (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                type TEXT NOT NULL,
+                description TEXT,
+                tags TEXT,
+                accessLevel INTEGER NOT NULL,
+                provenance TEXT,
+                linked_entities TEXT,
+                media_links TEXT
+            );
+        `);
+        console.log('[DB] Entities table is ready.');
+
 
         // Add a default user if they don't exist
         const defaultUser = await db.get('SELECT * FROM users WHERE operatorId = ?', 'Operator-7');
