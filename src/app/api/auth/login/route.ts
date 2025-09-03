@@ -3,14 +3,11 @@ import { NextResponse } from 'next/server';
 import { db, getUserByKey, updateUserToken } from '@/lib/db';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-that-should-be-in-env';
 const JWT_EXPIRES_IN = '8h';
 
 export async function POST(request: Request) {
   try {
-    // Ensure DB is initialized
-    await db.exec('SELECT 1');
-
     const { accessKey } = await request.json();
 
     if (!accessKey) {
@@ -20,6 +17,7 @@ export async function POST(request: Request) {
     const user = await getUserByKey(accessKey);
 
     if (!user) {
+        console.log(`[LOGIN_FAIL] Invalid access key attempted: ${accessKey}`);
         return NextResponse.json({ error: 'Invalid credentials.' }, { status: 401 });
     }
 
@@ -46,6 +44,6 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("[LOGIN_ERROR]", error);
-    return NextResponse.json({ error: 'Authentication failed.', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Authentication process failed.', details: error.message }, { status: 500 });
   }
 }

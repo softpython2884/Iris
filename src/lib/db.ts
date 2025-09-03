@@ -15,7 +15,7 @@ async function initializeDatabase() {
             driver: sqlite3.Database
         });
 
-        console.log('Connected to the SQLite database.');
+        console.log('[DB] Connected to the SQLite database.');
 
         await db.exec(`
             CREATE TABLE IF NOT EXISTS users (
@@ -27,7 +27,7 @@ async function initializeDatabase() {
             );
         `);
         
-        console.log('Users table is ready.');
+        console.log('[DB] Users table is ready.');
 
         // Add a default user if they don't exist
         const defaultUser = await db.get('SELECT * FROM users WHERE operatorId = ?', 'Operator-7');
@@ -35,14 +35,14 @@ async function initializeDatabase() {
             await db.run(
                 'INSERT INTO users (operatorId, accessKey, securityLevel) VALUES (?, ?, ?)',
                 'Operator-7',
-                'IRIS-Ut9OWLLQWhB#FEc6awCLdLlZrSUh$WGzLHpvvCbY', // Pre-defined key from user
-                '7'
+                'IRIS-Ut9OWLLQWhB#FEc6awCLdLlZrSUh$WGzLHpvvCbY', // Pre-defined key
+                '7' // Admin level
             );
-            console.log('Default user "Operator-7" created.');
+            console.log('[DB] Default admin user "Operator-7" created.');
         }
 
     } catch (error) {
-        console.error('Error initializing database', error);
+        console.error('[DB_ERROR] Error initializing database', error);
         throw error; // Propagate the error to crash the app if DB fails
     }
 }
