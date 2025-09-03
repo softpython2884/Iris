@@ -2,7 +2,9 @@ import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import path from 'path';
 import crypto from 'crypto';
-import { BotJob, BotJobLog, BotJobUrl, Entity } from './types';
+import { BotJob, BotJobLog, BotJobUrl, ExtractedEntityDb } from './types';
+import { ExtractedEntity } from '@/ai/flows/automated-entity-enrichment';
+
 
 // Let's declare a global variable to hold the database connection.
 let db: Database<sqlite3.Database, sqlite3.Statement>;
@@ -97,15 +99,13 @@ async function initializeDatabase() {
                 jobId TEXT,
                 name TEXT NOT NULL,
                 type TEXT NOT NULL,
-                description TEXT,
+                summary TEXT,
                 tags TEXT,
                 keyFacts TEXT,
                 relationships TEXT,
                 relatedLinks TEXT,
-                accessLevel INTEGER NOT NULL,
+                accessLevel INTEGER NOT NULL DEFAULT 1,
                 provenance TEXT,
-                linked_entities TEXT,
-                media_links TEXT,
                 FOREIGN KEY(jobId) REFERENCES bot_jobs(id)
             );
         `);
@@ -319,28 +319,31 @@ export async function getMessagesForChannel(channel_id: string, since?: string) 
 
 // --- Entity & Bot Job Functions ---
 
-export async function getEntities() {
+export async function getEntities(): Promise<ExtractedEntityDb[]> {
     return db.all('SELECT * FROM entities ORDER BY name ASC');
 }
 
-export async function storeEntities(jobId: string, entities: Entity[]) {
+export async function storeEntities(jobId: string, entities: ExtractedEntity[], provenance: string) {
     const stmt = await db.prepare(
-        'INSERT INTO entities (id, jobId, name, type, description, tags, keyFacts, relationships, relatedLinks, accessLevel, provenance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO entities (id, jobId, name, type, summary, tags, keyFacts, relationships, relatedLinks, provenance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
     for (const entity of entities) {
-        await stmt.run(
-            crypto.randomUUID(),
-            jobId,
-            entity.name,
-            entity.type,
-            entity.summary,
-            JSON.stringify(entity.tags),
-            JSON.stringify(entity.keyFacts),
-            JSON.stringify(entity.relationships),
-            JSON.stringify(entity.relatedLinks),
-            1, // Default access level
-            entity.provenance
-        );
+        try {
+            await stmt.run(
+                crypto.randomUUID(),
+                jobId,
+                entity.name,
+                entity.type,
+                entity.summary,
+                JSON.stringify(entity.tags),
+                JSON.stringify(entity.keyFacts),
+                JSON.stringify(entity.relationships),
+                JSON.stringify(entity.relatedLinks || []),
+                provenance
+            );
+        } catch(e) {
+            console.error("Failed to store entity", entity.name, e);
+        }
     }
     await stmt.finalize();
 }

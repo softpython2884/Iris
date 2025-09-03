@@ -2,8 +2,7 @@
 'use server';
 
 import {
-  automatedEntityEnrichment,
-  ExtractedEntity,
+  automatedEntityEnrichment
 } from '@/ai/flows/automated-entity-enrichment';
 import {
   updateJobStatus,
@@ -13,7 +12,6 @@ import {
   addUrlToQueue,
   storeEntities,
 } from '@/lib/db';
-import { Entity } from '../types';
 import { scrapeWebPage } from './scraping-service';
 
 interface JobOptions {
@@ -67,8 +65,7 @@ export async function runJob(jobId: string, options: JobOptions = {}) {
         
         // 3. Store extracted entities
         if (entities.length > 0) {
-            const entitiesToStore: Entity[] = entities.map(e => ({...e, provenance: url, id: '', accessLevel: 1}));
-            await storeEntities(jobId, entitiesToStore);
+            await storeEntities(jobId, entities, url);
             await logToJob(jobId, 'INFO', `Successfully stored ${entities.length} entities in the database.`);
         }
 

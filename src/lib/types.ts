@@ -51,3 +51,17 @@ export type BotJobLog = {
     level: 'INFO' | 'WARN' | 'ERROR';
     message: string;
 };
+
+export type ExtractedEntityDb = {
+    id: string;
+    jobId: string;
+    name: string;
+    type: 'Person' | 'Organization' | 'Site';
+    summary: string;
+    tags: string;
+    keyFacts: string;
+    relationships: string;
+    relatedLinks: string;
+    provenance?: string;
+    accessLevel: 1 | 2 | 3;
+}
