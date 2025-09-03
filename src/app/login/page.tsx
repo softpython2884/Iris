@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { HardDrive, KeyRound, UserPlus } from 'lucide-react';
+import { HardDrive, KeyRound, UserPlus, LoaderCircle } from 'lucide-react';
 import { OrwellLogo } from '@/components/orwell-logo';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -14,15 +15,45 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [accessKey, setAccessKey] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.MouseEvent) => {
+  const handleLogin = async (e: React.MouseEvent) => {
     e.preventDefault();
-    // For now, we'll just redirect to the dashboard.
-    // Later, this will involve real authentication.
-    router.push('/');
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessKey }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Authentication failed');
+      }
+
+      const userData = await response.json();
+      // In a real app, you'd store the token in sessionStorage/localStorage
+      // and use a state management library.
+      console.log("Login successful:", userData);
+      router.push('/');
+
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -44,11 +75,18 @@ export default function LoginPage() {
               id="access-key"
               type="password"
               placeholder="ACCESS KEY"
+              value={accessKey}
+              onChange={(e) => setAccessKey(e.target.value)}
+              disabled={isLoading}
               className="pl-10 pr-4 h-12 text-center text-lg text-accent tracking-[0.3em] bg-background/50 border-accent/50 focus:border-accent placeholder:text-accent/50"
             />
           </div>
-          <Button onClick={handleLogin} className="w-full h-12 bg-accent text-accent-foreground hover:bg-accent/80 text-lg font-bold">
-            [ INITIATE SESSION ]
+          <Button onClick={handleLogin} disabled={isLoading} className="w-full h-12 bg-accent text-accent-foreground hover:bg-accent/80 text-lg font-bold">
+            {isLoading ? (
+              <LoaderCircle className="animate-spin" />
+            ) : (
+              '[ INITIATE SESSION ]'
+            )}
           </Button>
           <Button variant="outline" asChild className="w-full h-12 border-accent/50 text-accent hover:bg-accent/10 hover:text-accent">
             <Link href="/signup">
