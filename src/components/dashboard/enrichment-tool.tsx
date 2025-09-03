@@ -41,7 +41,7 @@ export function EnrichmentTool() {
   };
 
   return (
-    <Card className="flex-1 flex flex-col border-primary/50 bg-primary/10">
+    <Card className="flex-1 flex flex-col border-primary/50 bg-primary/10 h-full">
       <CardHeader className="py-3 px-4">
         <div className="flex items-center gap-2">
           <BrainCircuit className="h-5 w-5 text-accent" />
