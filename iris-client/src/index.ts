@@ -21,7 +21,8 @@ async function main() {
 
   try {
     // Simple ping to check if server is up, not a real endpoint yet
-    await axios.get(SERVER_URL);
+    // A better check would be a dedicated /api/health endpoint
+    await axios.get(`${SERVER_URL}/api/system/lockdown`);
     console.log('Connection established.');
   } catch (error) {
     console.error('Error connecting to master server. Is it running?');
@@ -37,17 +38,17 @@ async function main() {
     console.log(`\nWelcome, ${operatorId}.`);
     console.log(`Permission Level: ${securityLevel}`);
     console.log('Authentication successful. Session token acquired.');
-    console.log('\nType "help" for a list of commands.');
-
+    console.log('\nIRIS terminal is ready. Awaiting commands...');
+    // We will keep the readline interface open for future commands
+    // rl.close(); 
   } catch (error: any) {
     if (error.response) {
         console.error(`\nAuthentication failed: ${error.response.data.error} (Status: ${error.response.status})`);
     } else {
         console.error('\nAn unexpected error occurred during login.');
     }
+    rl.close();
   }
-
-  rl.close();
 }
 
 main();

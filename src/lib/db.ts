@@ -67,6 +67,29 @@ async function initializeDatabase() {
         `);
         console.log('[DB] Mailbox table is ready.');
 
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS chat_channels (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                is_persistent BOOLEAN DEFAULT 0,
+                created_at TEXT NOT NULL
+            );
+        `);
+        console.log('[DB] Chat channels table is ready.');
+
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id TEXT PRIMARY KEY,
+                channel_id TEXT NOT NULL,
+                sender_id TEXT NOT NULL,
+                encrypted_content TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                FOREIGN KEY(channel_id) REFERENCES chat_channels(id),
+                FOREIGN KEY(sender_id) REFERENCES users(operatorId)
+            );
+        `);
+        console.log('[DB] Chat messages table is ready.');
+
 
         // Add a default user if they don't exist
         const defaultUser = await db.get('SELECT * FROM users WHERE operatorId = ?', 'Operator-7');
