@@ -29,6 +29,16 @@ async function initializeDatabase() {
         
         console.log('[DB] Users table is ready.');
 
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS system_state (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+        `);
+
+        console.log('[DB] System state table is ready.');
+
+
         // Add a default user if they don't exist
         const defaultUser = await db.get('SELECT * FROM users WHERE operatorId = ?', 'Operator-7');
         if (!defaultUser) {
@@ -40,6 +50,14 @@ async function initializeDatabase() {
             );
             console.log('[DB] Default admin user "Operator-7" created.');
         }
+
+        // Set initial lockdown state if not present
+        const lockdownState = await db.get('SELECT * FROM system_state WHERE key = ?', 'lockdown_level');
+        if (!lockdownState) {
+            await db.run('INSERT INTO system_state (key, value) VALUES (?, ?)', 'lockdown_level', 'NONE');
+            console.log('[DB] Initial lockdown level set to NONE.');
+        }
+
 
     } catch (error) {
         console.error('[DB_ERROR] Error initializing database', error);
@@ -79,5 +97,22 @@ export async function updateUserToken(operatorId: string, token: string, tokenEx
         operatorId
     );
 }
+
+
+// --- System State Functions ---
+
+export async function getSystemState(key: string): Promise<string | null> {
+    const row = await db.get('SELECT value FROM system_state WHERE key = ?', key);
+    return row?.value ?? null;
+}
+
+export async function setSystemState(key: string, value: string) {
+    return db.run(
+        'INSERT OR REPLACE INTO system_state (key, value) VALUES (?, ?)',
+        key,
+        value
+    );
+}
+
 
 export { db };

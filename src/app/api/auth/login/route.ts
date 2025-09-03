@@ -1,6 +1,6 @@
 'use server';
 import { NextResponse } from 'next/server';
-import { db, getUserByKey, updateUserToken } from '@/lib/db';
+import { db, getUserByKey, updateUserToken, getSystemState } from '@/lib/db';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-that-should-be-in-env';
@@ -8,6 +8,11 @@ const JWT_EXPIRES_IN = '8h';
 
 export async function POST(request: Request) {
   try {
+    const lockdownLevel = await getSystemState('lockdown_level');
+    if (lockdownLevel === 'LV2' || lockdownLevel === 'LV3') {
+        return NextResponse.json({ error: 'System is under lockdown. Access denied.' }, { status: 503 });
+    }
+
     const { accessKey } = await request.json();
 
     if (!accessKey) {
@@ -17,7 +22,8 @@ export async function POST(request: Request) {
     const user = await getUserByKey(accessKey);
 
     if (!user) {
-        console.log(`[LOGIN_FAIL] Invalid access key attempted: ${accessKey}`);
+        console.log(`[LOGIN_FAIL] Invalid access key attempted.`);
+        // Note: Consider logging failed attempts for auto-lock feature
         return NextResponse.json({ error: 'Invalid credentials.' }, { status: 401 });
     }
 

@@ -2,7 +2,8 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
-import { createUser, getUserByOperatorId } from '@/lib/db';
+import { createUser, getUserByOperatorId, getSystemState } from '@/lib/db';
+import { authenticateRequest } from '@/lib/auth';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-that-should-be-in-env';
 
@@ -19,26 +20,17 @@ function generateAccessKey(): string {
 
 export async function POST(request: Request) {
   try {
-    // 1. Authenticate the requestor
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return NextResponse.json({ error: 'Authorization required.' }, { status: 401 });
+    const authData = await authenticateRequest(request);
+    if ('error' in authData) {
+        return NextResponse.json({ error: authData.error }, { status: authData.status });
     }
     
-    const token = authHeader.substring(7);
-    let decodedToken: any;
-    try {
-        decodedToken = jwt.verify(token, JWT_SECRET);
-    } catch (error) {
-        return NextResponse.json({ error: 'Invalid or expired token.' }, { status: 401 });
-    }
-
     // 2. Check permissions
-    if (decodedToken.securityLevel !== '7') {
+    if (authData.decodedToken.securityLevel !== '7') {
         return NextResponse.json({ error: 'Insufficient permissions. Administrator access required.' }, { status: 403 });
     }
     
-    console.log(`[SIGNUP_REQUEST] Authorized by: ${decodedToken.operatorId}`);
+    console.log(`[SIGNUP_REQUEST] Authorized by: ${authData.decodedToken.operatorId}`);
 
     // 3. Proceed with user creation
     const { operatorId, securityLevel, subLevel } = await request.json();
