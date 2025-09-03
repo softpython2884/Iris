@@ -13,6 +13,7 @@ function askQuestion(query: string): Promise<string> {
 }
 
 async function main() {
+  console.clear();
   console.log('╭───────────────────────────────────╮');
   console.log('│   IRIS Sub-System Access Terminal   │');
   console.log('╰───────────────────────────────────╯');
