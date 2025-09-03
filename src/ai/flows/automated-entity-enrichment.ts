@@ -5,13 +5,14 @@
 /**
  * @fileOverview This file defines a Genkit flow for automated entity enrichment.
  *
- * The flow takes a text input and enriches it with relevant information about
- * people, organizations, and sites using GenAI.
+ * The flow takes a text input, analyzes it, and extracts structured data
+ * about people, organizations, and sites mentioned within it.
  *
  * @file        automated-entity-enrichment.ts
  * @exports   automatedEntityEnrichment
  * @exports   AutomatedEntityEnrichmentInput
  * @exports   AutomatedEntityEnrichmentOutput
+ * @exports   ExtractedEntity
  */
 
 import {ai} from '@/ai/genkit';
@@ -19,14 +20,47 @@ import {z} from 'genkit';
 
 // Define the input schema for the automated entity enrichment flow.
 const AutomatedEntityEnrichmentInputSchema = z.object({
-  text: z.string().describe('The text to analyze and enrich with entity data.'),
+  text: z
+    .string()
+    .describe('The source text to analyze and extract entities from.'),
 });
 
-// Define the output schema for the automated entity enrichment flow.
-const AutomatedEntityEnrichmentOutputSchema = z.object({
-  enrichedText: z
+// Define a detailed schema for a single extracted entity.
+const ExtractedEntitySchema = z.object({
+  name: z.string().describe('The full name of the entity.'),
+  type: z
+    .enum(['Person', 'Organization', 'Site'])
+    .describe('The type of the entity.'),
+  summary: z
     .string()
-    .describe('The text enriched with relevant entity information.'),
+    .describe('A concise summary of the entity based on the provided text.'),
+  tags: z
+    .array(z.string())
+    .describe('A list of relevant keywords or tags associated with the entity.'),
+  keyFacts: z
+    .array(z.string())
+    .describe('A list of key facts or data points about the entity.'),
+  relationships: z
+    .array(
+      z.object({
+        entityName: z.string().describe('The name of the related entity.'),
+        relationship: z
+          .string()
+          .describe(
+            "The nature of the relationship (e.g., 'works for', 'located in', 'subsidiary of')."
+          ),
+      })
+    )
+    .describe(
+      'A list of relationships to other entities mentioned in the text.'
+    ),
+});
+
+// Define the output schema for the flow, which is a list of extracted entities.
+const AutomatedEntityEnrichmentOutputSchema = z.object({
+  entities: z
+    .array(ExtractedEntitySchema)
+    .describe('An array of structured entities extracted from the text.'),
 });
 
 // Define the input and output types based on the schemas.
@@ -36,6 +70,7 @@ export type AutomatedEntityEnrichmentInput = z.infer<
 export type AutomatedEntityEnrichmentOutput = z.infer<
   typeof AutomatedEntityEnrichmentOutputSchema
 >;
+export type ExtractedEntity = z.infer<typeof ExtractedEntitySchema>;
 
 // Define the automated entity enrichment flow.
 const automatedEntityEnrichmentFlow = ai.defineFlow(
@@ -45,9 +80,9 @@ const automatedEntityEnrichmentFlow = ai.defineFlow(
     outputSchema: AutomatedEntityEnrichmentOutputSchema,
   },
   async input => {
-    // Call the prompt to enrich the text with entity data.
+    // Call the prompt to extract structured entity data from the text.
     const {output} = await automatedEntityEnrichmentPrompt(input);
-    // Return the enriched text.
+    // Return the list of extracted entities.
     return output!;
   }
 );
@@ -57,20 +92,30 @@ const automatedEntityEnrichmentPrompt = ai.definePrompt({
   name: 'automatedEntityEnrichmentPrompt',
   input: {schema: AutomatedEntityEnrichmentInputSchema},
   output: {schema: AutomatedEntityEnrichmentOutputSchema},
-  prompt: `You are an AI assistant designed to enrich text with relevant entity information.
+  prompt: `You are a highly skilled intelligence analyst. Your mission is to meticulously analyze the provided text and extract comprehensive, structured information about all significant entities (people, organizations, and sites) mentioned.
 
-  Your task is to analyze the given text and identify people, organizations, and sites mentioned within it.
-  Then, enrich the text by adding relevant details about these entities, such as their descriptions, relationships, and other pertinent information.
+You must format your output as a JSON object that strictly adheres to the provided schema. For each entity found, create a detailed record.
 
-  Text to analyze:
-  {{text}}`,
+- **name**: The full, official name of the entity.
+- **type**: Classify as 'Person', 'Organization', ou 'Site'.
+- **summary**: Provide a concise but comprehensive summary of the entity's role and significance based *only* on the provided text.
+- **tags**: Generate a list of short, relevant keywords (e.g., "tech", "military", "finance", "operative").
+- **keyFacts**: List the most critical pieces of information about the entity as bullet points.
+- **relationships**: Identify and describe all connections between this entity and other entities mentioned in the text.
+
+Analyze the following text and extract all entities:
+
+Text to analyze:
+\`\`\`
+{{text}}
+\`\`\``,
 });
 
 /**
- * Enriches the input text with relevant entity information using GenAI.
+ * Analyzes source text and extracts a structured list of entities using GenAI.
  *
- * @param input - The input object containing the text to enrich.
- * @returns A promise that resolves to the enriched text.
+ * @param input - The input object containing the text to analyze.
+ * @returns A promise that resolves to an object containing an array of extracted entities.
  */
 export async function automatedEntityEnrichment(
   input: AutomatedEntityEnrichmentInput
