@@ -26,6 +26,15 @@ export type SystemLogEntry = {
   message: string;
 };
 
+export type AuditLogEntry = {
+  id: number;
+  timestamp: string;
+  eventType: string;
+  operatorId: string | null;
+  details: string;
+  signature: string;
+};
+
 export type BotJob = {
     id: string;
     operatorId: string;

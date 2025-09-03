@@ -114,6 +114,27 @@ These endpoints require a valid JWT in the `Authorization: Bearer <token>` heade
     -   `401 Unauthorized`: If the token is missing or invalid.
     -   `403 Forbidden`: If the user's security level is not 7.
 
+#### Retrieve Audit Log
+
+-   **URL**: `GET /api/system/audit`
+-   **Description**: Retrieves the complete, signed audit log for all sensitive system events. **Requires an administrator token (Security Level 7).**
+-   **Success Response (200 OK)**:
+    ```json
+    [
+        {
+            "id": "number",
+            "timestamp": "string",
+            "eventType": "string", // e.g., "LOCKDOWN_CHANGE", "LOGIN_FAIL", "BOT_JOB_CREATED"
+            "operatorId": "string | null",
+            "details": "string",
+            "signature": "string" // SHA256 hash of the log entry
+        }
+    ]
+    ```
+-   **Error Responses**:
+    -   `401 Unauthorized`: If the token is missing or invalid.
+    -   `403 Forbidden`: If the user's security level is not 7.
+
 #### Send a Message
 
 -   **URL**: `POST /api/messages`
@@ -232,7 +253,7 @@ Endpoints for managing data collection bots and the "Orwell-like" entity databas
             "status": "string", // PENDING, RUNNING, COMPLETED, FAILED
             "createdAt": "string",
             "updatedAt": "string",
-            "completedAt": "string" // or null
+            "completedAt": "string | null"
         }
     ]
     ```
@@ -285,7 +306,8 @@ Endpoints for managing data collection bots and the "Orwell-like" entity databas
 
 #### List All Entities
 - **URL**: `GET /api/entities`
-- **Description**: Retrieves all entities stored in the "Orwell" database.
+- **URL with Search**: `GET /api/entities?q=<search_term>`
+- **Description**: Retrieves all entities stored in the "Orwell" database. Supports basic text search via the `q` parameter.
 - **Success Response (200 OK)**:
     ```json
     [

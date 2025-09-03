@@ -2,7 +2,7 @@ import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import path from 'path';
 import crypto from 'crypto';
-import { BotJob, BotJobLog, BotJobUrl, ExtractedEntityDb } from './types';
+import { BotJob, BotJobLog, BotJobUrl, ExtractedEntityDb, AuditLogEntry } from './types';
 import { ExtractedEntity } from '@/ai/flows/automated-entity-enrichment';
 
 
@@ -279,6 +279,10 @@ export async function logAuditEvent(eventType: string, operatorId: string | null
     details,
     signature
   );
+}
+
+export async function getAuditLog(): Promise<AuditLogEntry[]> {
+    return db.all('SELECT * FROM audit_log ORDER BY timestamp DESC');
 }
 
 export async function countRecentFailedLogins(minutes: number): Promise<number> {
