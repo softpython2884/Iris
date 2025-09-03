@@ -37,6 +37,19 @@ async function initializeDatabase() {
         `);
 
         console.log('[DB] System state table is ready.');
+        
+        await db.exec(`
+          CREATE TABLE IF NOT EXISTS audit_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            eventType TEXT NOT NULL,
+            operatorId TEXT,
+            details TEXT,
+            signature TEXT
+          );
+        `);
+        
+        console.log('[DB] Audit log table is ready.');
 
 
         // Add a default user if they don't exist
@@ -54,7 +67,7 @@ async function initializeDatabase() {
         // Set initial lockdown state if not present
         const lockdownState = await db.get('SELECT * FROM system_state WHERE key = ?', 'lockdown_level');
         if (!lockdownState) {
-            await db.run('INSERT INTO system_state (key, value) VALUES (?, ?)', 'lockdown_level', 'NONE');
+            await setSystemState('lockdown_level', 'NONE');
             console.log('[DB] Initial lockdown level set to NONE.');
         }
 
@@ -112,6 +125,22 @@ export async function setSystemState(key: string, value: string) {
         key,
         value
     );
+}
+
+// --- Audit Log Functions ---
+export async function logAuditEvent(eventType: string, operatorId: string | null, details: string) {
+  const timestamp = new Date().toISOString();
+  // In a real implementation, the signature would be a cryptographic signature of the log entry.
+  const signature = crypto.createHash('sha256').update(JSON.stringify({ timestamp, eventType, operatorId, details })).digest('hex');
+  
+  return db.run(
+    'INSERT INTO audit_log (timestamp, eventType, operatorId, details, signature) VALUES (?, ?, ?, ?, ?)',
+    timestamp,
+    eventType,
+    operatorId,
+    details,
+    signature
+  );
 }
 
 

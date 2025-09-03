@@ -1,7 +1,7 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import { getSystemState, setSystemState } from '@/lib/db';
+import { getSystemState, setSystemState, logAuditEvent } from '@/lib/db';
 import { authenticateRequest } from '@/lib/auth';
 
 /**
@@ -41,11 +41,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Invalid lockdown level provided.' }, { status: 400 });
     }
 
-    // 3. Update the system state
+    // 3. Update the system state and log the event
     await setSystemState('lockdown_level', level);
-
-    console.log(`[LOCKDOWN_SET] System lockdown level changed to ${level} by ${authData.decodedToken.operatorId}`);
-
+    await logAuditEvent('LOCKDOWN_CHANGE', authData.decodedToken.operatorId, `System lockdown level changed to ${level}`);
+    
     // In a real scenario, you would trigger other actions here,
     // like invalidating all user sessions for LV2/LV3.
     // For now, our auth middleware handles blocking access on LV2/LV3.
@@ -54,6 +53,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("[LOCKDOWN_POST_ERROR]", error);
+    await logAuditEvent('LOCKDOWN_ERROR', 'SYSTEM', `Failed to set lockdown state: ${error.message}`);
     return NextResponse.json({ error: 'Failed to set lockdown state.', details: error.message }, { status: 500 });
   }
 }

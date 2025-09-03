@@ -1,6 +1,6 @@
 'use server';
 import { NextResponse } from 'next/server';
-import { db, getUserByKey, updateUserToken, getSystemState } from '@/lib/db';
+import { db, getUserByKey, updateUserToken, getSystemState, logAuditEvent } from '@/lib/db';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-that-should-be-in-env';
@@ -10,6 +10,7 @@ export async function POST(request: Request) {
   try {
     const lockdownLevel = await getSystemState('lockdown_level');
     if (lockdownLevel === 'LV2' || lockdownLevel === 'LV3') {
+        await logAuditEvent('LOGIN_FAIL', null, 'Attempted login while system is under lockdown.');
         return NextResponse.json({ error: 'System is under lockdown. Access denied.' }, { status: 503 });
     }
 
@@ -22,8 +23,7 @@ export async function POST(request: Request) {
     const user = await getUserByKey(accessKey);
 
     if (!user) {
-        console.log(`[LOGIN_FAIL] Invalid access key attempted.`);
-        // Note: Consider logging failed attempts for auto-lock feature
+        await logAuditEvent('LOGIN_FAIL', null, `Invalid access key used.`);
         return NextResponse.json({ error: 'Invalid credentials.' }, { status: 401 });
     }
 
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     
     await updateUserToken(user.operatorId, token, tokenExpires);
 
-    console.log(`[LOGIN] Successful login for: ${user.operatorId}`);
+    await logAuditEvent('LOGIN_SUCCESS', user.operatorId, `Operator successfully authenticated.`);
 
     return NextResponse.json({
         operatorId: user.operatorId,
@@ -50,6 +50,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("[LOGIN_ERROR]", error);
+    await logAuditEvent('LOGIN_ERROR', null, `Internal server error during login process: ${error.message}`);
     return NextResponse.json({ error: 'Authentication process failed.', details: error.message }, { status: 500 });
   }
 }
