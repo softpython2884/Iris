@@ -1,10 +1,12 @@
 'use server';
 import { NextResponse } from 'next/server';
-import { db, getUserByKey, updateUserToken, getSystemState, logAuditEvent } from '@/lib/db';
+import { db, getUserByKey, updateUserToken, getSystemState, logAuditEvent, countRecentFailedLogins, setSystemState } from '@/lib/db';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-that-should-be-in-env';
 const JWT_EXPIRES_IN = '8h';
+const FAILED_LOGIN_THRESHOLD = 5;
+const FAILED_LOGIN_TIMEFRAME_MINUTES = 1;
 
 export async function POST(request: Request) {
   try {
@@ -24,6 +26,17 @@ export async function POST(request: Request) {
 
     if (!user) {
         await logAuditEvent('LOGIN_FAIL', null, `Invalid access key used.`);
+        
+        // Auto-lock check
+        const failedAttempts = await countRecentFailedLogins(FAILED_LOGIN_TIMEFRAME_MINUTES);
+        if (failedAttempts >= FAILED_LOGIN_THRESHOLD) {
+            const currentLockdown = await getSystemState('lockdown_level');
+            if (currentLockdown === 'NONE') {
+                await setSystemState('lockdown_level', 'LV1');
+                await logAuditEvent('AUTOLOCK_TRIGGERED', 'SYSTEM', `System auto-locked to LV1 due to ${failedAttempts} failed login attempts.`);
+            }
+        }
+        
         return NextResponse.json({ error: 'Invalid credentials.' }, { status: 401 });
     }
 

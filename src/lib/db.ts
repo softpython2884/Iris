@@ -143,5 +143,14 @@ export async function logAuditEvent(eventType: string, operatorId: string | null
   );
 }
 
+export async function countRecentFailedLogins(minutes: number): Promise<number> {
+    const since = new Date(Date.now() - minutes * 60 * 1000).toISOString();
+    const result = await db.get(
+        "SELECT COUNT(*) as count FROM audit_log WHERE eventType = 'LOGIN_FAIL' AND timestamp >= ?",
+        since
+    );
+    return result.count;
+}
+
 
 export { db };
