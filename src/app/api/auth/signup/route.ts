@@ -1,7 +1,7 @@
 'use server';
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { addUser } from './../login/route';
+import { createUser, getUserByOperatorId } from '@/lib/db';
 
 function generateAccessKey(): string {
     const prefix = "IRIS-";
@@ -14,7 +14,6 @@ function generateAccessKey(): string {
     return prefix + result;
 }
 
-
 export async function POST(request: Request) {
   try {
     const { operatorId, securityLevel, subLevel } = await request.json();
@@ -22,27 +21,25 @@ export async function POST(request: Request) {
     if (!operatorId || !securityLevel) {
         return NextResponse.json({ error: 'Operator ID and Security Level are required.' }, { status: 400 });
     }
-
-    // In a real app, you would check if the user making this request has permissions (e.g. Level 7)
+    
+    const existingUser = await getUserByOperatorId(operatorId);
+    if (existingUser) {
+        return NextResponse.json({ error: 'Operator ID already exists.' }, { status: 409 });
+    }
     
     const accessKey = generateAccessKey();
-    const token = crypto.randomBytes(32).toString('hex');
-    const privateKey = crypto.randomBytes(64).toString('hex');
-    
-    const newUser = {
+    const fullSecurityLevel = subLevel ? `${securityLevel}.${subLevel}` : String(securityLevel);
+
+    await createUser({
       operatorId,
       accessKey,
-      securityLevel: subLevel ? `${securityLevel}.${subLevel}` : String(securityLevel),
-      token,
-      privateKey,
-    };
-
-    addUser(newUser); // Add user to our in-memory store
+      securityLevel: fullSecurityLevel,
+    });
     
-    console.log(`[SIGNUP] New user created:`, { operatorId: newUser.operatorId, securityLevel: newUser.securityLevel });
+    console.log(`[SIGNUP] New user created:`, { operatorId, securityLevel: fullSecurityLevel });
 
     // Return the generated key so the admin can give it to the new user.
-    return NextResponse.json({ accessKey, token, privateKey });
+    return NextResponse.json({ accessKey });
 
   } catch (error: any) {
     console.error("[SIGNUP_ERROR]", error);

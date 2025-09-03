@@ -1,46 +1,47 @@
 'use server';
 import { NextResponse } from 'next/server';
+import { db, getUserByKey, updateUserToken } from '@/lib/db';
+import jwt from 'jsonwebtoken';
 
-// This is a global in-memory store for demonstration purposes.
-// In a real application, you would use a persistent database.
-const users: { [key: string]: any } = {
-    "Operator-7": {
-        operatorId: "Operator-7",
-        accessKey: "IRIS-Ut9OWLLQWhB#FEc6awCLdLlZrSUh$WGzLHpvvCbY",
-        securityLevel: "7",
-        token: "dummy-token-for-op7",
-        privateKey: "dummy-private-key-for-op7"
-    }
-};
-
-// Allow new users to be added from the signup route
-export function addUser(user: any) {
-    users[user.operatorId] = user;
-}
-
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key';
+const JWT_EXPIRES_IN = '8h';
 
 export async function POST(request: Request) {
   try {
+    // Ensure DB is initialized
+    await db.exec('SELECT 1');
+
     const { accessKey } = await request.json();
 
     if (!accessKey) {
         return NextResponse.json({ error: 'Access Key is required.' }, { status: 400 });
     }
 
-    // Find user by accessKey (highly inefficient, for demo only)
-    const user = Object.values(users).find(u => u.accessKey === accessKey);
+    const user = await getUserByKey(accessKey);
 
     if (!user) {
         return NextResponse.json({ error: 'Invalid credentials.' }, { status: 401 });
     }
 
+    // Generate JWT
+    const token = jwt.sign(
+        { operatorId: user.operatorId, securityLevel: user.securityLevel },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+    );
+    
+    // Store token and expiration in DB
+    const decoded = jwt.decode(token) as { exp: number };
+    const tokenExpires = new Date(decoded.exp * 1000).toISOString();
+    
+    await updateUserToken(user.operatorId, token, tokenExpires);
+
     console.log(`[LOGIN] Successful login for: ${user.operatorId}`);
 
-    // Return user info, but omit sensitive data like the key itself
     return NextResponse.json({
         operatorId: user.operatorId,
         securityLevel: user.securityLevel,
-        token: user.token
+        token: token
     });
 
   } catch (error: any) {
