@@ -13,13 +13,13 @@ import {
 } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
-const MAX_LOGS = 50;
+const MAX_LOGS = 20;
 
 const initialLog: SystemLogEntry = {
   id: 0,
   timestamp: new Date().toISOString(),
   level: 'SYSTEM',
-  message: 'SYSTEM BOOT SEQUENCE COMPLETE. ORWELL OS v1.0 ONLINE.',
+  message: 'ORWELL OS v1.0 ONLINE.',
 };
 
 const randomMessages = [
@@ -31,7 +31,6 @@ const randomMessages = [
   'Enrichment pipeline initiated for raw data chunk.',
   'ERROR: Bot-003 failed to parse target robots.txt.',
   'Lockdown state changed to NONE.',
-  'DB connection health: optimal.',
 ];
 
 const getRandomLevel = (): SystemLogEntry['level'] => {
@@ -55,7 +54,7 @@ export function SystemLog() {
       message,
     };
     setLogs((prev) => [...prev, newLog].slice(-MAX_LOGS));
-  }, 3000);
+  }, 4500);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -64,27 +63,27 @@ export function SystemLog() {
   }, [logs]);
 
   const levelColor = {
-    INFO: 'text-foreground/80',
-    WARN: 'text-yellow-400',
-    ERROR: 'text-red-500',
-    SYSTEM: 'text-accent',
+    INFO: 'text-foreground/60',
+    WARN: 'text-yellow-400/80',
+    ERROR: 'text-red-500/80',
+    SYSTEM: 'text-accent/80',
   };
 
   return (
     <Card className="flex-1 flex flex-col border-primary/50 bg-primary/10">
-      <CardHeader className="py-3 px-4">
+      <CardHeader className="py-2 px-3">
         <div className="flex items-center gap-2">
-          <Terminal className="h-5 w-5 text-accent" />
-          <CardTitle className="text-lg text-accent">SYSTEM LOG</CardTitle>
+          <Terminal className="h-4 w-4 text-accent" />
+          <CardTitle className="text-base text-accent">SYSTEM LOG</CardTitle>
         </div>
       </CardHeader>
       <CardContent
         ref={scrollAreaRef}
-        className="flex-1 space-y-2 overflow-y-auto p-4 text-sm"
+        className="flex-1 space-y-1 overflow-y-auto p-2 text-xs"
       >
         {logs.map((log) => (
           <div key={log.id} className="flex gap-2">
-            <span className="text-muted-foreground">
+            <span className="text-muted-foreground/50">
               [{format(new Date(log.timestamp), 'HH:mm:ss')}]
             </span>
             <span

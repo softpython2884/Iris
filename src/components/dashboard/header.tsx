@@ -14,11 +14,11 @@ import {
 
 export function Header() {
   return (
-    <header className="flex h-14 items-center justify-between border-b border-accent/20 bg-primary/20 px-4">
+    <header className="flex h-14 items-center justify-between border-b border-accent/20 bg-primary/20 px-4 shrink-0">
       <div className="flex items-center gap-3">
         <OrwellLogo className="h-8 w-8 text-accent" />
         <h1 className="text-xl font-bold tracking-widest text-accent font-headline">
-          ORWELL OS
+          IRIS
         </h1>
       </div>
       <div className="flex items-center gap-4">

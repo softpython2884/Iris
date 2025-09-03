@@ -14,8 +14,7 @@ export function OrwellLogo(props: SVGProps<SVGSVGElement>) {
     >
       <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
       <circle cx="12" cy="12" r="3" />
-      <line x1="12" y1="2" y2="22" strokeWidth="0.5" opacity="0.3"/>
-      <line x1="2" y1="12" y2="22" x2="22" strokeWidth="0.5" opacity="0.3"/>
+      <circle cx="12" cy="12" r="7" strokeWidth="0.5" opacity="0.5"/>
     </svg>
   );
 }
