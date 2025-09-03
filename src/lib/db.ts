@@ -149,6 +149,46 @@ async function initializeDatabase() {
         `);
         console.log('[DB] Bot job logs table is ready.');
 
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS remote_agents (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                status TEXT NOT NULL, -- ONLINE, OFFLINE
+                ipAddress TEXT NOT NULL,
+                lastSeen TEXT NOT NULL
+            );
+        `);
+        console.log('[DB] Remote agents table is ready.');
+        
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS remote_sessions (
+                id TEXT PRIMARY KEY,
+                agentId TEXT NOT NULL,
+                operatorId TEXT NOT NULL,
+                startTime TEXT NOT NULL,
+                endTime TEXT,
+                status TEXT NOT NULL, -- PENDING, ACTIVE, CLOSED, DENIED, OVERRIDDEN
+                consentStatus TEXT,
+                approvalLog TEXT,
+                FOREIGN KEY(agentId) REFERENCES remote_agents(id),
+                FOREIGN KEY(operatorId) REFERENCES users(operatorId)
+            );
+        `);
+        console.log('[DB] Remote sessions table is ready.');
+
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS remote_commands (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sessionId TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                command TEXT NOT NULL,
+                output TEXT,
+                isError BOOLEAN DEFAULT 0,
+                FOREIGN KEY(sessionId) REFERENCES remote_sessions(id)
+            );
+        `);
+        console.log('[DB] Remote commands table is ready.');
+
 
         // Add a default user if they don't exist
         const defaultUser = await db.get('SELECT * FROM users WHERE operatorId = ?', 'Operator-7');
@@ -413,6 +453,48 @@ export async function getJobUrls(jobId: string): Promise<BotJobUrl[]> {
 
 export async function getJobLogs(jobId: string): Promise<BotJobLog[]> {
     return db.all('SELECT * FROM bot_job_logs WHERE jobId = ? ORDER BY timestamp ASC', jobId);
+}
+
+// --- IRIS Remote Supervision Functions ---
+
+export async function createRemoteAgent(name: string, ipAddress: string): Promise<string> {
+    const agentId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    await db.run(
+        'INSERT INTO remote_agents (id, name, status, ipAddress, lastSeen) VALUES (?, ?, ?, ?, ?)',
+        agentId, name, 'ONLINE', ipAddress, now
+    );
+    return agentId;
+}
+
+export async function getRemoteAgents() {
+    return db.all('SELECT id, name, status, ipAddress, lastSeen FROM remote_agents ORDER BY lastSeen DESC');
+}
+
+export async function getRemoteAgentById(agentId: string) {
+    return db.get('SELECT * FROM remote_agents WHERE id = ?', agentId);
+}
+
+export async function createRemoteSession(agentId: string, operatorId: string, status: string): Promise<string> {
+    const sessionId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    await db.run(
+        'INSERT INTO remote_sessions (id, agentId, operatorId, startTime, status) VALUES (?, ?, ?, ?, ?)',
+        sessionId, agentId, operatorId, now, status
+    );
+    return sessionId;
+}
+
+export async function getRemoteSession(sessionId: string) {
+    return db.get('SELECT * FROM remote_sessions WHERE id = ?', sessionId);
+}
+
+export async function logRemoteCommand(sessionId: string, command: string, output: string, isError: boolean) {
+    const now = new Date().toISOString();
+    return db.run(
+        'INSERT INTO remote_commands (sessionId, timestamp, command, output, isError) VALUES (?, ?, ?, ?, ?)',
+        sessionId, now, command, output, isError
+    );
 }
 
 

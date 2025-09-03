@@ -307,6 +307,85 @@ Endpoints for managing data collection bots and the "Orwell-like" entity databas
 
 ---
 
+### IRIS Remote Supervision
+
+Endpoints for managing remote agents and command execution.
+
+#### List Remote Agents
+- **URL**: `GET /api/iris/agents`
+- **Description**: Retrieves a list of all registered remote agents.
+- **Success Response (200 OK)**:
+    ```json
+    [
+      {
+        "id": "string",
+        "name": "string",
+        "status": "string", // ONLINE, OFFLINE
+        "ipAddress": "string",
+        "lastSeen": "string"
+      }
+    ]
+    ```
+
+#### Register a New Agent
+- **URL**: `POST /api/iris/agents`
+- **Description**: Registers a new agent with the system (for now, this simulates an agent coming online).
+- **Request Body**:
+    ```json
+    {
+      "name": "string",
+      "ipAddress": "string"
+    }
+    ```
+- **Success Response (201 Created)**:
+    ```json
+    {
+      "message": "Agent registered successfully",
+      "agentId": "string"
+    }
+    ```
+
+#### Initiate Remote Session
+- **URL**: `POST /api/iris/sessions`
+- **Description**: Requests to start a new remote supervision session with an agent.
+- **Request Body**:
+    ```json
+    {
+      "agentId": "string"
+    }
+    ```
+- **Success Response (202 Accepted)**: Indicates that the session request has been sent and is awaiting consent.
+    ```json
+    {
+      "message": "Session request sent. Awaiting consent.",
+      "sessionId": "string",
+      "status": "PENDING"
+    }
+    ```
+
+#### Execute a Remote Command
+- **URL**: `POST /api/iris/sessions/{sessionId}/command`
+- **Description**: Sends a shell command to be executed on the remote agent. **Requires the session to be ACTIVE.**
+- **Request Body**:
+    ```json
+    {
+      "command": "string" // e.g., "ls -la"
+    }
+    ```
+- **Success Response (200 OK)**:
+    ```json
+    {
+      "output": "string", // The result from the executed command
+      "isError": false
+    }
+    ```
+- **Error Responses**:
+    - `403 Forbidden`: If the session is not active.
+    - `404 Not Found`: If the session ID is invalid.
+
+
+---
+
 ### Default User for Testing
 
 A default user is pre-configured in the server for development and testing purposes.
