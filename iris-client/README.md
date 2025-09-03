@@ -215,6 +215,98 @@ These endpoints require a valid JWT in the `Authorization: Bearer <token>` heade
 
 ---
 
+### Bot & Entity Management
+
+Endpoints for managing data collection bots and the "Orwell-like" entity database.
+
+#### List All Bot Jobs
+- **URL**: `GET /api/bots/jobs`
+- **Description**: Retrieves a list of all data collection jobs, past and present.
+- **Success Response (200 OK)**:
+    ```json
+    [
+        {
+            "id": "string",
+            "operatorId": "string",
+            "initialUrl": "string",
+            "status": "string", // PENDING, RUNNING, COMPLETED, FAILED
+            "createdAt": "string",
+            "updatedAt": "string",
+            "completedAt": "string" // or null
+        }
+    ]
+    ```
+
+#### Initiate a New Bot Job
+- **URL**: `POST /api/bots/jobs`
+- **Description**: Creates and starts a new asynchronous bot job to scrape and analyze a target URL.
+- **Request Body**:
+    ```json
+    {
+      "targetUrl": "string",
+      "cookies": "string" // Optional: e.g., "name=value; name2=value2"
+    }
+    ```
+- **Success Response (202 Accepted)**: The job has been queued. Use the returned `jobId` to track its progress.
+    ```json
+    {
+      "message": "Job successfully initiated. You can track its progress using the job ID.",
+      "jobId": "string"
+    }
+    ```
+
+#### Get Job Details
+- **URL**: `GET /api/bots/jobs/{jobId}`
+- **Description**: Retrieves the complete details for a specific job, including its status, URL queue, and execution logs.
+- **Success Response (200 OK)**:
+    ```json
+    {
+        "id": "string",
+        "status": "string",
+        // ...other job fields
+        "queue": [
+            {
+                "id": "number",
+                "url": "string",
+                "status": "string", // PENDING, PROCESSED, FAILED
+                "depth": "number"
+            }
+        ],
+        "logs": [
+            {
+                "id": "number",
+                "timestamp": "string",
+                "level": "string", // INFO, WARN, ERROR
+                "message": "string"
+            }
+        ]
+    }
+    ```
+
+#### List All Entities
+- **URL**: `GET /api/entities`
+- **Description**: Retrieves all entities stored in the "Orwell" database.
+- **Success Response (200 OK)**:
+    ```json
+    [
+        {
+            "id": "string",
+            "jobId": "string",
+            "name": "string",
+            "type": "string", // "Person", "Organization", "Site"
+            "summary": "string",
+            "tags": "string", // JSON string of an array
+            "keyFacts": "string", // JSON string of an array
+            "relationships": "string", // JSON string of an array
+            "relatedLinks": "string", // JSON string of an array
+            "accessLevel": "number",
+            "provenance": "string" // URL where the entity was found
+        }
+    ]
+    ```
+
+---
+
 ### Default User for Testing
 
 A default user is pre-configured in the server for development and testing purposes.
