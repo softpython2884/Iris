@@ -20,7 +20,7 @@ The client communicates with the server via a REST API. All communication is bas
 
 ### Authentication Flow
 
-1.  The client sends an `accessKey` to the `/api/auth/login` endpoint.
+1.  The client sends a permanent `accessKey` to the `/api/auth/login` endpoint.
 2.  The server validates the key and, if successful, returns a short-lived JSON Web Token (JWT).
 3.  For all subsequent requests to protected endpoints, the client must include this token in the `Authorization` header.
     -   **Header Format**: `Authorization: Bearer <your_jwt_token>`
@@ -28,6 +28,8 @@ The client communicates with the server via a REST API. All communication is bas
 ---
 
 ### Public Endpoints
+
+These endpoints do not require an authentication token.
 
 #### User Login
 
@@ -47,10 +49,18 @@ The client communicates with the server via a REST API. All communication is bas
       "token": "string" // This is the JWT session token
     }
     ```
--   **Error Response (401 Unauthorized)**:
+-   **Error Responses**:
+    -   `401 Unauthorized`: If credentials are invalid.
+    -   `503 Service Unavailable`: If the system is in lockdown (LV2 or LV3).
+
+#### Get System Lockdown Status
+
+-   **URL**: `GET /api/system/lockdown`
+-   **Description**: Retrieves the current system-wide lockdown level.
+-   **Success Response (200 OK)**:
     ```json
     {
-      "error": "Invalid credentials."
+      "lockdownLevel": "string" // e.g., "NONE", "LV1", "LV2", "LV3"
     }
     ```
 
@@ -58,22 +68,18 @@ The client communicates with the server via a REST API. All communication is bas
 
 ### Protected Endpoints
 
-These endpoints require a valid JWT in the `Authorization` header.
+These endpoints require a valid JWT in the `Authorization: Bearer <token>` header.
 
 #### Create New Operator
 
 -   **URL**: `POST /api/auth/signup`
--   **Description**: Creates a new operator profile. **This is a protected route and requires an administrator token (Security Level 7).**
--   **Headers**:
-    ```
-    Authorization: Bearer <admin_jwt_token>
-    ```
+-   **Description**: Creates a new operator profile. **Requires an administrator token (Security Level 7).**
 -   **Request Body**:
     ```json
     {
       "operatorId": "string",
       "securityLevel": "string", // e.g., "5" or "3.1"
-      "subLevel": "string" // Optional
+      "subLevel": "string" // Optional, for levels like 3.1
     }
     ```
 -   **Success Response (201 Created)**: The server will generate a new unique access key for the created user.
@@ -84,8 +90,74 @@ These endpoints require a valid JWT in the `Authorization` header.
     ```
 -   **Error Responses**:
     -   `401 Unauthorized`: If the token is missing or invalid.
-    -   `403 Forbidden`: If the token is valid but the user's security level is not 7.
+    -   `403 Forbidden`: If the user's security level is not 7.
     -   `409 Conflict`: If the `operatorId` already exists.
+
+#### Set System Lockdown Level
+
+-   **URL**: `POST /api/system/lockdown`
+-   **Description**: Sets the system-wide lockdown level. **Requires an administrator token (Security Level 7).**
+-   **Request Body**:
+    ```json
+    {
+      "level": "string" // Must be one of "NONE", "LV1", "LV2", "LV3"
+    }
+    ```
+-   **Success Response (200 OK)**:
+    ```json
+    {
+      "message": "System lockdown level set to <level>"
+    }
+    ```
+-   **Error Responses**:
+    -   `400 Bad Request`: If the level is invalid.
+    -   `401 Unauthorized`: If the token is missing or invalid.
+    -   `403 Forbidden`: If the user's security level is not 7.
+
+#### Send a Message
+
+-   **URL**: `POST /api/messages`
+-   **Description**: Sends a new encrypted message to another operator.
+-   **Request Body**:
+    ```json
+    {
+      "recipientId": "string",
+      "encryptedContent": "string", // Content encrypted by the client
+      "signature": "string",      // Signature of the content, for verification
+      "conversationId": "string", // Optional: to link messages in a conversation
+      "prevMessageId": "string"   // Optional: to version a message
+    }
+    ```
+-   **Success Response (201 Created)**:
+    ```json
+    {
+      "message": "Message sent successfully.",
+      "messageId": "string",
+      "conversationId": "string"
+    }
+    ```
+
+#### Retrieve Messages
+
+-   **URL**: `GET /api/messages`
+-   **Description**: Retrieves all messages for the authenticated user.
+-   **Success Response (200 OK)**:
+    ```json
+    {
+      "messages": [
+        {
+          "id": "string",
+          "conversationId": "string",
+          "senderId": "string",
+          "recipientId": "string",
+          "encryptedContent": "string",
+          "signature": "string",
+          "timestamp": "string",
+          "prevMessageId": "string"
+        }
+      ]
+    }
+    ```
 
 ---
 
@@ -97,7 +169,7 @@ A default user is pre-configured in the server for development and testing purpo
 -   **Access Key**: `IRIS-Ut9OWLLQWhB#FEc6awCLdLlZrSUh$WGzLHpvvCbY`
 -   **Security Level**: `7` (Administrator)
 
-The client should use this key to log in and get a token, which can then be used to create other users.
+The client should use this key to log in and get a token, which can then be used to create other users and manage the system.
 
 ## 3. Client TUI (Text-based User Interface) Design
 
@@ -148,3 +220,4 @@ This is an example of a smaller, focused UI component.
 - The client should be developed using libraries suitable for creating complex TUIs in Node.js, such as `blessed`, `blessed-contrib`, or similar.
 - It needs to handle asynchronous operations gracefully (e.g., API calls) without freezing the UI.
 - It must parse and display data from the server API within the defined UI components.
+```
