@@ -7,11 +7,17 @@ const users: { [key: string]: any } = {
     "Operator-7": {
         operatorId: "Operator-7",
         accessKey: "IRIS-Ut9OWLLQWhB#FEc6awCLdLlZrSUh$WGzLHpvvCbY",
-        securityLevel: "3.1",
+        securityLevel: "7",
         token: "dummy-token-for-op7",
         privateKey: "dummy-private-key-for-op7"
     }
 };
+
+// Allow new users to be added from the signup route
+export function addUser(user: any) {
+    users[user.operatorId] = user;
+}
+
 
 export async function POST(request: Request) {
   try {
